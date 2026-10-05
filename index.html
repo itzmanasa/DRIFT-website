@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DRIFT: Detection and Reasoning for Identified Fabrication Traces</title>
+<meta name="description" content="DRIFT is a zero-shot, black-box framework for fine-grained hallucination detection in Retrieval-Augmented Generation systems. PES University, Computer Science.">
+<style>
+:root{
+  box-sizing:border-box;
+  --bg:#f8fafc; --surface:#ffffff; --ink:#0f1b33; --muted:#4a5a75; --line:#dbe3ee;
+  --navy:#0b2a5b; --navy-d:#071d42; --cyan:#0e7fa8; --cyan-l:#e3f4fa; --on-navy:#ffffff;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1220; --surface:#121c31; --ink:#e8eefa; --muted:#a6b4cc; --line:#25324d;
+    --navy:#7fb2ff; --navy-d:#a9ccff; --cyan:#5cc8ea; --cyan-l:#122a3d; --on-navy:#071d42;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1220; --surface:#121c31; --ink:#e8eefa; --muted:#a6b4cc; --line:#25324d;
+  --navy:#7fb2ff; --navy-d:#a9ccff; --cyan:#5cc8ea; --cyan-l:#122a3d; --on-navy:#071d42;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-behavior:smooth;scroll-padding-top:calc(72px + env(safe-area-inset-top,0px))}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-text-size-adjust:100%}
+h1,h2,h3,p{margin:0}
+a{color:var(--cyan)}
+:focus-visible{outline:3px solid var(--cyan);outline-offset:3px;border-radius:6px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+section{padding:72px 0}
+h2{font-size:clamp(1.6rem,4vw,2.1rem);line-height:1.2;color:var(--navy);margin-bottom:12px;letter-spacing:-.01em}
+.lead{color:var(--muted);max-width:68ch}
+.alt{background:var(--surface);border-block:1px solid var(--line)}
+
+/* nav */
+header.nav{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;height:60px}
+.brand{font-weight:800;letter-spacing:.04em;color:var(--navy);text-decoration:none;font-size:1.15rem}
+.nav ul{display:flex;gap:4px;list-style:none;margin:0;padding:0;overflow-x:auto}
+.nav li a{display:block;padding:8px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:.95rem;font-weight:500;white-space:nowrap}
+.nav li a:hover{background:var(--cyan-l);color:var(--navy)}
+
+/* hero */
+.hero{padding:88px 0 80px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--surface),var(--bg))}
+.badge{display:inline-block;padding:6px 14px;border:1px solid var(--line);background:var(--cyan-l);color:var(--navy);border-radius:999px;font-size:.9rem;font-weight:600}
+.hero h1{font-size:clamp(3.4rem,13vw,6.5rem);line-height:1;letter-spacing:.02em;color:var(--navy);margin:22px 0 10px;font-weight:800}
+.hero .sub{font-size:clamp(1.1rem,3vw,1.5rem);color:var(--cyan);font-weight:600;margin-bottom:16px}
+.hero .desc{font-size:1.15rem;color:var(--muted);max-width:56ch;margin-bottom:32px}
+.btns{display:flex;flex-wrap:wrap;gap:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:15px 26px;border-radius:12px;font-weight:700;font-size:1rem;text-decoration:none;border:2px solid var(--navy);transition:transform .15s,box-shadow .15s,background .15s;min-height:52px}
+.btn.primary{background:var(--navy);color:var(--on-navy);box-shadow:0 6px 18px rgba(11,42,91,.22)}
+.btn.primary:hover{background:var(--navy-d);transform:translateY(-2px)}
+.btn.ghost{background:transparent;color:var(--navy)}
+.btn.ghost:hover{background:var(--cyan-l);transform:translateY(-2px)}
+.btn[aria-disabled="true"]{opacity:.65;cursor:not-allowed;border-style:dashed;pointer-events:none}
+.btn svg{width:22px;height:22px;fill:currentColor;flex:none}
+
+/* cards */
+.grid{display:grid;gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;transition:border-color .15s,box-shadow .15s}
+.card:hover{border-color:var(--cyan);box-shadow:0 6px 20px rgba(14,127,168,.12)}
+.two{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:32px}
+.card h3{font-size:1.1rem;color:var(--navy);margin-bottom:8px}
+.card p{color:var(--muted);font-size:.98rem}
+
+/* pipeline */
+.pipe{list-style:none;margin:36px 0 0;padding:0;display:grid;gap:10px;grid-template-columns:1fr}
+.pipe>li{position:relative;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--navy);border-radius:12px;padding:16px 20px;font-weight:600;color:var(--ink)}
+.pipe>li small{display:block;font-weight:400;color:var(--muted);font-size:.9rem;margin-top:2px}
+.pipe>li:not(:last-child)::after{content:"\2193";position:absolute;left:50%;bottom:-17px;transform:translateX(-50%);color:var(--cyan);font-weight:800;background:var(--bg);line-height:1;z-index:1}
+.alt .pipe>li:not(:last-child)::after{background:var(--surface)}
+.signals{display:grid;gap:12px;grid-template-columns:1fr;margin-top:28px}
+.sig{background:var(--cyan-l);border:1px solid var(--line);border-radius:12px;padding:18px}
+.sig b{display:block;color:var(--navy);margin-bottom:4px}
+.sig span{color:var(--muted);font-size:.95rem}
+@media (min-width:900px){
+  .pipe{grid-template-columns:repeat(4,1fr);gap:22px 18px}
+  .pipe>li{border-left:1px solid var(--line);border-top:5px solid var(--navy)}
+  .pipe>li:not(:last-child)::after{content:"\2192";left:auto;right:-16px;bottom:auto;top:50%;transform:translateY(-50%);background:none}
+  .pipe>li:nth-child(4)::after{display:none}
+  .signals{grid-template-columns:repeat(3,1fr)}
+}
+
+/* stats */
+.stats{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-top:32px}
+.stat{background:var(--navy);color:var(--on-navy);border-radius:14px;padding:28px 22px}
+.stat .n{font-size:clamp(2.4rem,7vw,3.2rem);font-weight:800;line-height:1.05;letter-spacing:-.01em}
+.stat .l{margin-top:8px;font-size:.98rem;opacity:.92}
+.note{margin-top:22px;color:var(--muted);font-size:.95rem;max-width:72ch}
+
+/* lists */
+.checks{list-style:none;margin:28px 0 0;padding:0;display:grid;gap:12px}
+.checks li{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px 14px 48px;position:relative}
+.checks li::before{content:"";position:absolute;left:18px;top:21px;width:14px;height:8px;border-left:3px solid var(--cyan);border-bottom:3px solid var(--cyan);transform:rotate(-45deg)}
+.fw{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:30px}
+.fw .card{border-top:4px solid var(--cyan)}
+
+/* team */
+.team{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:30px}
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--navy);color:var(--on-navy);display:grid;place-items:center;font-weight:700;font-size:1.15rem;margin-bottom:14px}
+.guide{margin-top:26px;padding:22px 24px;border-radius:14px;border:1px solid var(--line);border-left:5px solid var(--cyan);background:var(--surface)}
+.guide .role{font-size:.92rem;color:var(--muted)}
+.guide b{display:block;font-size:1.2rem;color:var(--navy);margin:2px 0}
+
+/* resources */
+.res{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:30px}
+.res .card{display:flex;flex-direction:column;gap:14px}
+.res .card.main{border:2px solid var(--navy)}
+.url{font-size:.85rem;word-break:break-all;color:var(--muted)}
+.contact{margin-top:28px}
+.contact a{word-break:break-all}
+
+footer{background:var(--navy-d);color:#e8eefa;padding:34px 0 calc(34px + env(safe-area-inset-bottom,0px));text-align:center}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) footer{background:#060b16}}
+:root[data-theme="dark"] footer{background:#060b16}
+footer a{color:#9fd8ee}
+@media (max-width:640px){
+  section{padding:52px 0}.hero{padding:56px 0}
+  .btn{width:100%}
+  .brand{font-size:1rem}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top">DRIFT</a>
+    <nav aria-label="Primary">
+      <ul>
+        <li><a href="#about">About</a></li>
+        <li><a href="#methodology">Methodology</a></li>
+        <li><a href="#results">Results</a></li>
+        <li><a href="#team">Team</a></li>
+        <li><a href="#resources">Resources</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="hero">
+    <div class="wrap">
+      <span class="badge">PES University &bull; Computer Science</span>
+      <h1>DRIFT</h1>
+      <p class="sub">Detection and Reasoning for Identified Fabrication Traces</p>
+      <p class="desc">Fine-grained, zero-shot hallucination detection for Retrieval-Augmented Generation systems.</p>
+      <div class="btns">
+        <a class="btn primary" href="https://github.com/itzmanasa/DRIFT-hallucination-detection" target="_blank" rel="noopener">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          View GitHub Repository
+        </a>
+        <a class="btn ghost" href="#resources">View Research Paper</a>
+      </div>
+    </div>
+  </div>
+
+  <section id="about">
+    <div class="wrap">
+      <h2>About DRIFT</h2>
+      <p class="lead">Retrieval-Augmented Generation (RAG) systems can still produce unsupported or contradictory information even when relevant evidence has been retrieved. Existing response-level detectors often fail to show which claims are fabricated, or why.</p>
+      <p class="lead" style="margin-top:14px">DRIFT addresses this with fine-grained, claim-level verification. It breaks a response into atomic factual units, checks each one against the retrieved evidence, and reports a verdict with the reasoning behind it.</p>
+    </div>
+  </section>
+
+  <section id="methodology" class="alt">
+    <div class="wrap">
+      <h2>How DRIFT works</h2>
+      <p class="lead">A response and its retrieved evidence pass through six stages. Each factual unit, called a DriftSpan, is scored independently.</p>
+      <ol class="pipe">
+        <li>RAG Response + Retrieved Evidence<small>Input</small></li>
+        <li>DriftSpan Decomposition<small>Atomic factual units</small></li>
+        <li>Retrieval Alignment<small>Match each span to evidence</small></li>
+        <li>Tri-Signal Extraction<small>Three complementary signals</small></li>
+        <li>Drift Index (DI)<small>Per-span score</small></li>
+        <li>Claim-Level Classification<small>Supported or fabricated</small></li>
+        <li>Response Drift Score (RDS)<small>Response-level aggregation</small></li>
+      </ol>
+      <h3 style="margin-top:40px;color:var(--navy)">Tri-Signal Extraction</h3>
+      <div class="signals">
+        <div class="sig"><b>NLI Entailment</b><span>DeBERTa</span></div>
+        <div class="sig"><b>Lexical Divergence</b><span>ROUGE-L</span></div>
+        <div class="sig"><b>Cross-Chunk Contradiction</b><span>Conflicts across retrieved chunks</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="results">
+    <div class="wrap">
+      <h2>Key results</h2>
+      <div class="grid stats">
+        <div class="stat"><div class="n">0.5559</div><div class="l">Response-level F1</div></div>
+        <div class="stat"><div class="n">74.43%</div><div class="l">Recall</div></div>
+        <div class="stat"><div class="n">0.6429</div><div class="l">Best F1 (Mistral-7B)</div></div>
+        <div class="stat"><div class="n">93%</div><div class="l">F1 reduction without NLI</div></div>
+      </div>
+      <p class="note">Results were obtained on the full RAGTruth test split: 2,574 samples across six LLMs. DRIFT outperformed all zero-shot baselines, including prompted GPT-4 (F1 = 0.476). Adding cross-chunk contradiction improved recall by 2.94 percentage points.</p>
+    </div>
+  </section>
+
+  <section id="outcome" class="alt">
+    <div class="wrap">
+      <h2>Project outcome</h2>
+      <p class="lead">DRIFT provides:</p>
+      <ul class="checks">
+        <li>Fine-grained localization of fabricated claims</li>
+        <li>Evidence-based reasoning</li>
+        <li>Interpretable claim-level verdicts</li>
+        <li>Overall response reliability assessment</li>
+        <li>Zero-shot operation without model fine-tuning or access to model internals</li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="future">
+    <div class="wrap">
+      <h2>Future work</h2>
+      <div class="grid fw">
+        <div class="card"><h3>Blind-spot mapping</h3><p>Identify systematic hallucination patterns and evidence-coverage gaps.</p></div>
+        <div class="card"><h3>Adaptive chunking</h3><p>Improve evidence alignment and reduce false positives.</p></div>
+        <div class="card"><h3>Domain-specific NLI</h3><p>Detect subtle hallucinations with models tuned to a domain.</p></div>
+        <div class="card"><h3>Multilingual extension</h3><p>Broaden applicability of DRIFT to RAG systems in other languages.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="team" class="alt">
+    <div class="wrap">
+      <h2>Team</h2>
+      <div class="grid team">
+        <div class="card"><div class="avatar" aria-hidden="true">NM</div><h3>N A Manasa</h3><p>Computer Science, PES University</p></div>
+        <div class="card"><div class="avatar" aria-hidden="true">SK</div><h3>D Sai Karthik</h3><p>Computer Science, PES University</p></div>
+      </div>
+      <div class="guide">
+        <span class="role">Project Guide</span>
+        <b>Prof. Ankita Singhai</b>
+        <span class="role">Department of Computer Science<br>PES University, Bangalore</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="resources">
+    <div class="wrap">
+      <h2>Project resources</h2>
+      <div class="grid res">
+        <div class="card main">
+          <h3>GitHub Repository</h3>
+          <p>Source code and project files.</p>
+          <span class="url">github.com/itzmanasa/DRIFT-hallucination-detection</span>
+          <a class="btn primary" href="https://github.com/itzmanasa/DRIFT-hallucination-detection" target="_blank" rel="noopener">Open on GitHub</a>
+        </div>
+        <div class="card">
+          <h3>Research Paper</h3>
+          <p>Link will be added once available.</p>
+          <!-- Replace href and remove aria-disabled when the paper URL is ready -->
+          <a class="btn ghost" aria-disabled="true" role="link" tabindex="-1">Not yet available</a>
+        </div>
+        <div class="card">
+          <h3>Project Documentation</h3>
+          <p>Link will be added once available.</p>
+          <a class="btn ghost" aria-disabled="true" role="link" tabindex="-1">Not yet available</a>
+        </div>
+      </div>
+
+      <div class="contact" id="contact">
+        <h2 style="margin-top:56px">Contact</h2>
+        <div class="grid team">
+          <div class="card"><h3>N A Manasa</h3><p>Email: <a href="mailto:EMAIL_PLACEHOLDER@example.com">[add approved email]</a></p></div>
+          <div class="card"><h3>D Sai Karthik</h3><p>Email: <a href="mailto:EMAIL_PLACEHOLDER@example.com">[add approved email]</a></p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>DRIFT &bull; PES University &bull; Computer Science</p>
+    <p style="margin-top:6px"><a href="https://github.com/itzmanasa/DRIFT-hallucination-detection" target="_blank" rel="noopener">GitHub Repository</a></p>
+  </div>
+</footer>
+</body>
+</html>
